@@ -1,209 +1,213 @@
 const axios = require("axios");
 
-module.exports = {
-	config: {
-		name: "chat",
-		version: "3.1",
-		author: "Fixed Version",
-		countDown: 3,
-		role: 0,
-		shortDescription: "Human-like AI Chatbot",
-		longDescription: {
-			en: "Chat with human-like AI - responds to mentions and natural conversations"
-		},
-		category: "ai",
-		guide: {
-			en: "{pn} <message> | {pn} on/off | mention 'bot' in message"
-		},
-	},
-
-	langs: {
-		en: {
-			turnedOn: "✅ AI Auto Chat turned on successfully!",
-			turnedOff: "❌ AI Auto Chat turned off successfully!",
-			error: "Sorry, I'm having trouble understanding right now. Please try again! 😅",
-		},
-	},
-
-	onStart: async function ({ args, threadsData, message, event, getLang }) {
-		try {
-			if (args[0] == "on" || args[0] == "off") {
-				await threadsData.set(event.threadID, args[0] == "on", "settings.simsimi");
-				return message.reply(args[0] == "on" ? getLang("turnedOn") : getLang("turnedOff"));
-			} else if (args[0]) {
-				const yourMessage = args.join(" ");
-				const responseMessage = await getHumanLikeResponse(yourMessage);
-				return message.reply(responseMessage);
-			}
-		} catch (error) {
-			console.error("Chat onStart error:", error.message);
-			return message.reply(getLang("error"));
-		}
-	},
-
-	onChat: async function ({ args, message, threadsData, event, isUserCallCommand, getLang }) {
-		try {
-			// Skip if it's a command call
-			if (isUserCallCommand) return;
-			
-			const messageText = args.join(" ");
-			if (!messageText || messageText.length < 2) return;
-			
-			const lowerMsg = messageText.toLowerCase();
-			const isAutoModeOn = await threadsData.get(event.threadID, "settings.simsimi");
-			
-			// Check if message mentions "bot" keywords
-			const botKeywords = ['bot', 'ai', 'robot', 'chatbot', 'বট', 'রোবট'];
-			const mentionsBot = botKeywords.some(keyword => lowerMsg.includes(keyword));
-			
-			// Only respond if auto mode is on OR bot is mentioned (not both)
-			if (isAutoModeOn || mentionsBot) {
-				const langCode = (await threadsData.get(event.threadID, "settings.lang")) || "en";
-				const responseMessage = await getHumanLikeResponse(messageText, langCode, mentionsBot);
-				
-				// Add small delay to seem more human
-				setTimeout(() => {
-					message.reply(responseMessage);
-				}, 800);
-			}
-			
-		} catch (error) {
-			console.error("Chat onChat error:", error.message);
-			// Don't reply on onChat errors to avoid spam
-		}
-	},
+const getAPIBase = async () => {
+  const { data } = await axios.get(
+    "https://api.simsimi.vn/v1/simtalk"
+  );
+  return data.bs;
 };
 
-// Get human-like response
-async function getHumanLikeResponse(yourMessage, langCode = "en", mentionsBot = false) {
-	try {
-		// Try AI API first
-		const aiResponse = await tryAIAPI(yourMessage, langCode);
-		if (aiResponse) {
-			return humanizeResponse(aiResponse);
-		}
-	} catch (error) {
-		// Silent fail, use fallback
-	}
-	
-	// Use contextual fallback
-	return getContextualFallback(yourMessage, mentionsBot);
-}
+const sendMessage = (api, threadID, message, messageID) =>
+  api.sendMessage(message, threadID, messageID);
 
-// Try AI API with proper error handling
-async function tryAIAPI(message, langCode) {
-	try {
-		const response = await axios.post(
-			"https://api.simsimi.vn/v1/simtalk",
-			new URLSearchParams({
-				text: message,
-				lc: langCode || "en",
-			}),
-			{ 
-				timeout: 5000,
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded'
-				}
-			}
-		);
-		
-		if (response.data && response.data.message && response.data.message.length > 0) {
-			return response.data.message;
-		}
-		
-		return null;
-	} catch (error) {
-		return null;
-	}
-}
+const cError = (api, threadID, messageID) =>
+  sendMessage(api, threadID, "error🦆💨", messageID);
 
-// Make response more human-like
-function humanizeResponse(response) {
-	if (!response) return "I'm not sure how to respond to that 🤔";
-	
-	let humanized = response.toString();
-	
-	// Add casual expressions (low chance to avoid spam)
-	const casualStarters = ["Well, ", "You know, ", "Actually, ", "Hmm, "];
-	const casualEnders = [" 😊", " 🤔", " 😄", " 👍"];
-	
-	// 15% chance for casual starter
-	if (Math.random() < 0.15) {
-		const starter = casualStarters[Math.floor(Math.random() * casualStarters.length)];
-		humanized = starter + humanized;
-	}
-	
-	// 20% chance for casual ender
-	if (Math.random() < 0.2) {
-		const ender = casualEnders[Math.floor(Math.random() * casualEnders.length)];
-		humanized = humanized + ender;
-	}
-	
-	// Make contractions
-	humanized = humanized
-		.replace(/\bI am\b/gi, "I'm")
-		.replace(/\bdo not\b/gi, "don't")
-		.replace(/\bcannot\b/gi, "can't")
-		.replace(/\byou are\b/gi, "you're")
-		.replace(/\bit is\b/gi, "it's");
-	
-	return humanized;
-}
+const teachBot = async (api, threadID, messageID, senderID, teachText) => {
+  const [ask, answers] = teachText.split(" - ").map(text => text.trim());
+  if (!ask || !answers) {
+    return sendMessage(api, threadID, "Invalid format. Use: {pn} teach <ask> - <answer1, answer2, ...>", messageID);
+  }
 
-// Contextual fallback responses
-function getContextualFallback(message, mentionsBot) {
-	const lowerMsg = message.toLowerCase();
-	
-	// Greeting responses
-	if (lowerMsg.includes('hello') || lowerMsg.includes('hi') || lowerMsg.includes('hey') || lowerMsg.includes('হাই')) {
-		const greetings = [
-			"Hey there! How's it going? 😊",
-			"Hi! What's up? 🙂",
-			"Hello! How are you? ✨",
-			"হাই! কেমন আছো? 😄"
-		];
-		return greetings[Math.floor(Math.random() * greetings.length)];
-	}
-	
-	// How are you
-	if (lowerMsg.includes('how are you') || lowerMsg.includes('কেমন আছো')) {
-		const responses = [
-			"I'm doing great! How about you? 😊",
-			"Pretty good! What about you? 🤗",
-			"ভালো আছি! তুমি কেমন? 😊"
-		];
-		return responses[Math.floor(Math.random() * responses.length)];
-	}
-	
-	// Joke requests
-	if (lowerMsg.includes('joke') || lowerMsg.includes('funny')) {
-		const jokes = [
-			"Why don't scientists trust atoms? Because they make up everything! 😄",
-			"I told my computer a joke... but it didn't laugh! 😂",
-			"Why did the programmer quit? He didn't get arrays! 🤓"
-		];
-		return jokes[Math.floor(Math.random() * jokes.length)];
-	}
-	
-	// Bot mentions
-	if (mentionsBot) {
-		const botResponses = [
-			"Yes, I'm here! What's up? 🤖",
-			"You called? I'm listening! 👂",
-			"Hey! What can I help you with? 💭",
-			"হ্যাঁ, বলো! কি দরকার? 🤖"
-		];
-		return botResponses[Math.floor(Math.random() * botResponses.length)];
-	}
-	
-	// General responses
-	const generalResponses = [
-		"That's interesting! 🤔",
-		"I see what you mean! 💭",
-		"Really? That's cool! 😊",
-		"আহা! দারুণ! 😄",
-		"বুঝলাম! 🤗"
-	];
-	
-	return generalResponses[Math.floor(Math.random() * generalResponses.length)];
-}
+  const answerArray = answers.split(",").map(ans => ans.trim()).filter(ans => ans !== "");
+
+  try {
+    const apiBase = await getAPIBase();
+    if (!apiBase) return cError(api, threadID, messageID);
+
+    const res = await axios.get(
+      `${apiBase}/bby/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(answerArray.join(","))}&uid=${senderID}`
+    );
+
+    const responseMsg = res.data?.message === "Teaching recorded successfully!"
+      ? `Successfully taught the bot!\n📖 Teaching Details:\n- Question: ${res.data.ask}\n- Answers: ${answerArray.join(", ")}\n- Your Total Teachings: ${res.data.userStats.user.totalTeachings}`
+      : res.data?.message || "Teaching failed.";
+      
+    return sendMessage(api, threadID, responseMsg, messageID);
+  } catch {
+    return cError(api, threadID, messageID);
+  }
+};
+
+const talkWithBot = async (api, threadID, messageID, senderID, input) => {
+  try {
+    const apiBase = await getAPIBase();
+    if (!apiBase) return cError(api, threadID, messageID);
+
+    const res = await axios.get(
+      `${apiBase}/bby?text=${encodeURIComponent(input)}&uid=${senderID}&font=2`
+    );
+
+    const reply = res.data?.text || "Please teach me this sentence!🦆💨";
+    const react = res.data.react || "";
+
+    return api.sendMessage(reply + react, threadID, (error, info) => {
+      if (error) return cError(api, threadID, messageID);
+      if (!global.GoatBot.onReply) global.GoatBot.onReply = new Map();
+      global.GoatBot.onReply.set(info.messageID, {
+        commandName: module.exports.config.name,
+        type: "reply",
+        author: senderID,
+        msg: reply,
+      });
+    }, messageID);
+  } catch {
+    return cError(api, threadID, messageID);
+  }
+};
+
+const botMsgInfo = async (api, threadID, messageID, senderID, input) => {
+  try {
+    const apiBase = await getAPIBase();
+    if (!apiBase) return cError(api, threadID, messageID);
+
+    const res = await axios.get(
+      `${apiBase}/bby/msg?ask=${encodeURIComponent(input)}&uid=${senderID}`
+    );
+
+    if (!res.data || res.data.status !== "Success" || !Array.isArray(res.data.messages) || res.data.messages.length === 0) {
+      return sendMessage(api, threadID, "No matching messages found!🦆💨", messageID);
+    }
+
+    const askText = `📜 Ask: ${res.data.ask}\n\n`;
+    const answers = res.data.messages.map(msg => `🎀 [${msg.index}] ${msg.ans}`).join("\n");
+
+    return sendMessage(api, threadID, `${askText}${answers}`, messageID);
+  } catch {
+    return cError(api, threadID, messageID);
+  }
+};
+
+const deleteMessage = async (api, threadID, messageID, senderID, input) => {
+  try {
+    const parts = input.split(" - ").map(part => part.trim());
+
+    if (!parts[0]) {
+      return sendMessage(api, threadID, "Invalid format. Use: {pn} delete <text> OR {pn} delete <text> - <index>", messageID);
+    }
+
+    const text = parts[0];
+    const index = parts[1] && !isNaN(parts[1]) ? parseInt(parts[1], 10) : null;
+
+    const apiBase = await getAPIBase();
+    if (!apiBase) return cError(api, threadID, messageID);
+
+    let url = `${apiBase}/bby/delete?text=${encodeURIComponent(text)}&uid=${senderID}`;
+    if (index !== null) url += `&index=${index}`;
+
+    const res = await axios.get(url);
+
+    return sendMessage(api, threadID, res.data?.status === "Success"
+      ? `✅ Successfully deleted ${index !== null ? `answer at index ${index} of` : "all answers related to"}: ${text}`
+      : res.data?.message || "❌ Failed to delete the message!", messageID);
+  } catch {
+    return cError(api, threadID, messageID);
+  }
+};
+
+const editMessage = async (api, threadID, messageID, senderID, input) => {
+  try {
+    const parts = input.split(" - ").map(part => part.trim());
+
+    if (parts.length < 2) {
+      return sendMessage(api, threadID, "Invalid format. Use:\n1. {pn} edit <ask> - <newAsk>\n2. {pn} edit <ask> - <index> - <newAnswer>", messageID);
+    }
+
+    const [ask, newAskOrIndex, newAns] = parts;
+    const apiBase = await getAPIBase();
+    if (!apiBase) return cError(api, threadID, messageID);
+
+    if (!isNaN(newAskOrIndex) && newAns) {
+      const index = parseInt(newAskOrIndex, 10);
+
+      const res = await axios.get(
+        `${apiBase}/bby/edit?ask=${encodeURIComponent(ask)}&index=${index}&newAns=${encodeURIComponent(newAns)}&uid=${senderID}`
+      );
+
+      return sendMessage(api, threadID, res.data?.status === "Success"
+        ? `✅ Successfully updated answer at index ${index} to: ${newAns}`
+        : res.data?.message || "❌ Failed to update the answer!", messageID);
+    } else {
+      const res = await axios.get(
+        `${apiBase}/bby/edit?ask=${encodeURIComponent(ask)}&newAsk=${encodeURIComponent(newAskOrIndex)}&uid=${senderID}`
+      );
+
+      return sendMessage(api, threadID, res.data?.status === "Success"
+        ? `✅ Successfully updated question to: ${newAskOrIndex}`
+        : res.data?.message || "❌ Failed to update the question!", messageID);
+    }
+  } catch {
+    return cError(api, threadID, messageID);
+  }
+};
+
+module.exports.config = {
+  name: "bot",
+  aliases: ["robot","sim"],
+  version: "1.6.9",
+  author: "Nazrul",
+  role: 0,
+  description: "Talk with the bot or teach it new responses",
+  category: "talk",
+  countDown: 3,
+  guide: {
+    en: `{pn} <text> - Ask the bot something\n{pn} teach <ask> - <answer> - Teach the bot a new response\n\nExamples:\n1. {pn} Hello\n2. {pn} teach hi - hello\n3. {pn} delete <text> - Delete all answers related to text\n4. {pn} delete <text> - <index> - Delete specific answer at index\n5. {pn} edit <Ask> - <New Ask> to update the ask query\n6. {pn} edit <ask> - <index> - <new ans> update specific answer at index`,
+  },
+};
+
+module.exports.onStart = async ({ api, event, args }) => {
+  const { threadID, messageID, senderID } = event;
+  if (args.length === 0) {
+    return sendMessage(api, threadID, "Please provide text or teach the bot!", messageID);
+  }
+
+  const input = args.join(" ").trim();
+  const [command, ...rest] = input.split(" ");
+
+  switch (command.toLowerCase()) {
+    case "teach":
+      return teachBot(api, threadID, messageID, senderID, rest.join(" ").trim());
+    case "msg":
+      return botMsgInfo(api, threadID, messageID, senderID, rest.join(" ").trim());
+    case "edit":
+      return editMessage(api, threadID, messageID, senderID, rest.join(" ").trim());
+    case "delete":
+    case "remove":
+      return deleteMessage(api, threadID, messageID, senderID, rest.join(" ").trim());
+    default:
+      return talkWithBot(api, threadID, messageID, senderID, input);
+  }
+};
+
+module.exports.onChat = async ({ api, event }) => {
+  const { threadID, messageID, body, senderID } = event;
+
+  const cMessages = ["🎀 Hello bby!", "🎀 Hi there!", "🎀 Hey! How can I help?"];
+  const userInput = body.toLowerCase().trim();
+
+  const keywords = ["bby", "baby", "bot", "বট", "robot"];
+
+  if (keywords.some((keyword) => userInput.startsWith(keyword))) {
+    const isQuestion = userInput.split(" ").length > 1;
+    if (isQuestion) {
+      const question = userInput.slice(userInput.indexOf(" ") + 1).trim();
+
+      try {
+        const res = await axios.get(
+          `${await getAPIBase()}/bby?text=${encodeURIComponent(question)}&uid=${senderID}&font=2`
+        );
+        const replyMsg = res.data?.text || "Please teach me this sentence!🦆💨";
+        const react = res.data.react || "";
+
+        return api.sendMessage(replyMsg + react, threadID, (error, info) => {
+          if (!error) {
