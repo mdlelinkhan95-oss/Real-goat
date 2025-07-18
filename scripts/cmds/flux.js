@@ -1,1 +1,100 @@
-const _0x22a43c=_0x30e7;(function(_0x1df7bf,_0x1eb078){const _0x280637=_0x30e7,_0x418132=_0x1df7bf();while(!![]){try{const _0x35e5e=parseInt(_0x280637(0xb7))/0x1*(-parseInt(_0x280637(0xb4))/0x2)+parseInt(_0x280637(0xb6))/0x3+parseInt(_0x280637(0xb8))/0x4+parseInt(_0x280637(0xb5))/0x5*(parseInt(_0x280637(0xa8))/0x6)+parseInt(_0x280637(0xa7))/0x7+parseInt(_0x280637(0xc0))/0x8+-parseInt(_0x280637(0xaf))/0x9;if(_0x35e5e===_0x1eb078)break;else _0x418132['push'](_0x418132['shift']());}catch(_0x44b508){_0x418132['push'](_0x418132['shift']());}}}(_0x36bd,0xb3536));function hi(){const _0x136601=_0x30e7;console[_0x136601(0xb1)](_0x136601(0xbc));}hi();const axios=require(_0x22a43c(0xa5)),{getStreamFromURL}=global['utils'];function _0x30e7(_0x1594c4,_0xc9d10d){const _0x36bd81=_0x36bd();return _0x30e7=function(_0x30e75d,_0x46bdcf){_0x30e75d=_0x30e75d-0xa4;let _0x530c37=_0x36bd81[_0x30e75d];return _0x530c37;},_0x30e7(_0x1594c4,_0xc9d10d);}module[_0x22a43c(0xaa)]={'config':{'name':_0x22a43c(0xbf),'version':'1.1','author':_0x22a43c(0xb0),'countDown':0x0,'longDescription':{'en':_0x22a43c(0xb3)},'category':_0x22a43c(0xbe),'role':0x0,'guide':{'en':_0x22a43c(0xab)}},'onStart':async function({api:_0x66bb00,event:_0x45752a,args:_0x1b82be,message:_0x245c6c}){const _0x3c56a1=_0x22a43c;if(!this[_0x3c56a1(0xba)]())return _0x245c6c[_0x3c56a1(0xad)](_0x3c56a1(0xb2));const _0x56c287=_0x1b82be[_0x3c56a1(0xbd)]('\x20')[_0x3c56a1(0xbb)]();if(!_0x56c287)return _0x245c6c[_0x3c56a1(0xad)]('Please\x20provide\x20a\x20prompt\x20to\x20generate\x20an\x20image.');_0x245c6c[_0x3c56a1(0xad)]('Creating......!',async(_0x29bbfe,_0x31ad3a)=>{const _0x3c1325=_0x3c56a1;if(_0x29bbfe)return console['error'](_0x29bbfe);try{const _0x1743e5=_0x3c1325(0xae)+encodeURIComponent(_0x56c287)+_0x3c1325(0xac),_0x2b4615=await axios['get'](_0x1743e5),{html:_0x263f09}=_0x2b4615[_0x3c1325(0xa9)][_0x3c1325(0xa9)],_0x2fd488=_0x263f09['match'](/https:\/\/aicdn\.picsart\.com\/[a-zA-Z0-9-]+\.jpg/);if(!_0x2fd488)return _0x245c6c['reply'](_0x3c1325(0xb9));const _0x38b91a=await getStreamFromURL(_0x2fd488[0x0],'generated_image.png');_0x245c6c[_0x3c1325(0xad)]({'body':_0x3c1325(0xa6),'attachment':_0x38b91a});}catch(_0xb3d076){console[_0x3c1325(0xa4)](_0xb3d076),_0x245c6c[_0x3c1325(0xad)]('An\x20error\x20occurred\x20while\x20generating\x20the\x20image.\x20Please\x20try\x20again.');}});},'checkAuthor':function(){return this['config']['author']==='Redwan';}};function _0x36bd(){const _0xb02708=['https://global-redwans-apis.onrender.com/api/flux?p=','14478921CBGdll','Redwan','log','Author\x20verification\x20failed.\x20Command\x20cannot\x20be\x20executed.','Generate\x20AI\x20images\x20based\x20on\x20your\x20prompt.','517460FWEWkH','5YpTTHV','3507429QTCSfQ','3hpFzeP','1166336gyFzuS','Failed\x20to\x20generate\x20the\x20image.\x20Please\x20try\x20again.','checkAuthor','trim','Hello\x20World!','join','image','flux','3799080WsUyqj','error','axios','✅\x20Image\x20generated\x20successfully!','3736964zLgjtS','3900078ODopFW','data','exports','{pn}\x20<prompt>','&mode=flux','reply'];_0x36bd=function(){return _0xb02708;};return _0x36bd();}
+const axios = require("axios");
+const fs = require("fs-extra");
+
+module.exports = {
+  config: {
+    name: "flux",
+    aliases: [],
+    version: "5.0",
+    author: "nexo_here",
+    countDown: 5,
+    role: 0,
+    shortDescription: "Generate ultra-realistic AI images with advanced style options",
+    longDescription: "Use Flux API to generate premium, hyper-realistic AI images with customizable styles and options",
+    category: "AI-IMAGE",
+    guide: {
+      en: `{pn} <prompt> | [style]\n\n📌 Example:\n{pn} a lion in desert | realistic\n{pn} warrior girl with sword | anime\n{pn} cybernetic dragon flying | cyberpunk`
+    }
+  },
+
+  langs: {
+    en: {
+      noPrompt: `❗ Please provide a prompt.\n\n📌 Example:\n• flux a lion in jungle | realistic\n• flux dragon on rooftop | fantasy`,
+      generating: "🖼️ Generating your premium AI image...",
+      failed: "❌ Failed to generate image. Please try again later.",
+      invalidStyle: "⚠️ Unknown style provided! Using your prompt as is."
+    }
+  },
+
+  onStart: async function ({ message, args, getLang }) {
+    if (!args[0]) return message.reply(getLang("noPrompt"));
+
+    const input = args.join(" ").split("|");
+    const rawPrompt = input[0].trim();
+    let style = input[1]?.trim().toLowerCase() || "";
+
+    // অনেক উন্নত স্টাইল ম্যাপ (AI image gen এর জন্য জনপ্রিয় ট্যাগসহ)
+    const styleMap = {
+      realistic: "photorealistic, ultra-detailed, 8K UHD, DSLR quality, natural lighting, depth of field",
+      anime: "anime style, vibrant colors, sharp lines, cel shading, highly detailed character art",
+      fantasy: "fantasy art, epic background, magical aura, dramatic lighting, mythical creatures",
+      cyberpunk: "cyberpunk, neon lights, futuristic cityscape, dark atmosphere, high tech details",
+      cartoon: "cartoon style, bold outlines, bright colors, 2D animation look, fun and playful",
+      "digital art": "digital painting, smooth brush strokes, vivid colors, high detail",
+      "oil painting": "oil painting style, textured brush strokes, classical art, warm tones",
+      "photography": "professional photography, natural light, sharp focus, realistic",
+      "low poly": "low poly art style, geometric shapes, minimalistic, vibrant colors",
+      "pixel art": "pixel art style, retro gaming, 8-bit colors, sharp edges",
+      "surrealism": "surrealistic art, dreamlike scenes, abstract, vivid imagination",
+      "vaporwave": "vaporwave style, pastel colors, retro-futuristic, glitch art",
+      "concept art": "concept art, detailed environment, mood lighting, cinematic",
+      "portrait": "portrait photography, close-up, high detail, studio lighting",
+      "macro": "macro photography, extreme close-up, detailed textures, shallow depth of field"
+    };
+
+    // যদি style থাকে, সেটি styleMap থেকে নিবো, অন্যথায় rawPrompt ব্যবহার করবো
+    let finalPrompt;
+    if (style) {
+      if (styleMap[style]) {
+        finalPrompt = `${rawPrompt}, ${styleMap[style]}`;
+      } else {
+        // Unknown style দিলে শুধু rawPrompt নিবে এবং ইউজারকে জানাবে
+        finalPrompt = rawPrompt;
+        message.reply(getLang("invalidStyle"));
+      }
+    } else {
+      finalPrompt = rawPrompt;
+    }
+
+    message.reply(getLang("generating"));
+
+    try {
+      const res = await axios.get(`https://betadash-api-swordslush-production.up.railway.app/flux?prompt=${encodeURIComponent(finalPrompt)}`);
+      const imageUrl = res?.data?.data?.imageUrl;
+
+      if (!imageUrl) return message.reply(getLang("failed"));
+
+      const imgStream = await axios.get(imageUrl, { responseType: "stream" });
+      const filePath = `${__dirname}/cache/flux_${Date.now()}.jpg`;
+      const writer = fs.createWriteStream(filePath);
+
+      imgStream.data.pipe(writer);
+
+      writer.on("finish", () => {
+        message.reply({
+          body: `🧠 Prompt: ${rawPrompt}${style ? `\n🎨 Style: ${style}` : ""}`,
+          attachment: fs.createReadStream(filePath)
+        }, () => fs.unlinkSync(filePath));
+      });
+
+      writer.on("error", () => {
+        message.reply(getLang("failed"));
+      });
+
+    } catch (err) {
+      console.error(err.message);
+      return message.reply(getLang("failed"));
+    }
+  }
+};
+  
