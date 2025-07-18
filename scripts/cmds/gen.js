@@ -1,43 +1,45 @@
-const axios = require('axios');
-const path = require('path');
-const fs = require('fs-extra');
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
 
 module.exports = {
-  config: {
-    name: "genx",
-    aliases: [],
-    version: "1.0",
-    author: "Vex_Kshitiz",
-    countDown: 50,
-    role: 0,
-    longDescription: {
-      vi: '',
-      en: "Generate images"
-    },
-    category: "ai",
-    guide: {
-      vi: '',
-      en: "{pn} <prompt>"
-    }
-  },
+config: {
+name: "gen",
+version: "1.0",
+author: "Rifat | nxo_here",
+countDown: 5,
+role: 0,
+shortDescription: { en: "Generate image using prompt" },
+longDescription: { en: "Generate a new image based on your prompt." },
+category: "image",
+guide: { en: "{p}gen [prompt]" }
+},
 
-  onStart: async function ({ api, commandName, event, args }) {
-    try {
-      api.setMessageReaction("✅", event.messageID, (a) => {}, true);
-      const prompt = args.join(' ');
+onStart: async function ({ args, message }) {
+const prompt = args.join(" ");
+if (!prompt) return message.reply("⚠️ | Please provide a prompt to generate an image.");
 
-      const response = await axios.get(`https://dall-e-tau-steel.vercel.app/kshitiz?prompt=${encodeURIComponent(prompt)}`);
-      const imageUrl = response.data.response;
+const imgPath = path.join(__dirname, "cache", `${Date.now()}_gen.jpg`);
+const waitMsg = await message.reply(`🎨 Generating image for: "${prompt}"...\nPlease wait...`);
 
-      const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      const imgPath = path.join(__dirname, 'cache', 'dalle_image.jpg');
-      await fs.outputFile(imgPath, imgResponse.data);
-      const imgData = fs.createReadStream(imgPath);
+try {
+const imageUrl = `https://edit-and-gen.onrender.com/gen?prompt=${encodeURIComponent(prompt)}`;
+const res = await axios.get(imageUrl, { responseType: "arraybuffer" });
 
-      await api.sendMessage({ body: '', attachment: imgData }, event.threadID, event.messageID);
-    } catch (error) {
-      console.error("Error:", error);
-      api.sendMessage("Error generating image. Please try again later.", event.threadID, event.messageID);
-    }
-  }
+await fs.ensureDir(path.dirname(imgPath));
+await fs.writeFile(imgPath, Buffer.from(res.data, "binary"));
+
+await message.reply({
+body: `✅ | Generated image for: "${prompt}"`,
+attachment: fs.createReadStream(imgPath)
+});
+
+} catch (err) {
+console.error("GEN Error:", err);
+message.reply("❌ | Failed to generate image. Please try again later.");
+} finally {
+await fs.remove(imgPath);
+message.unsend(waitMsg.messageID);
+}
+}
 };
