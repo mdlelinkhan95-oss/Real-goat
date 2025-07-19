@@ -10,7 +10,7 @@ module.exports.config = {
   permission: 0,
   credits: "IMRAN (Styled by ChatGPT)",
   description: "Generate stylish images using Ephoto360 templates",
-  prefix: false,
+  prefix: true,
   premium: false,
   category: "textmaker",
   usages: "/ephoto <template> <name>",
