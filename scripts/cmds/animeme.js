@@ -1,41 +1,67 @@
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
+
 module.exports = {
   config: {
-    name: 'animeme',
-    aliases: ['anime-meme'],
-    author: 'Xemon',
-    version: '1.0.0',
+    name: "animeme",
+    aliases: ["animeirl"],
+    version: "2.1.0",
+    author: "Perplexity AI",
+    countDown: 5,
     role: 0,
-    countdown: 5,
-    shortDescription: { en: 'Get random anime meme' },
-    longDescription: { en: 'Get random anime meme from reddit' },
-    category: 'fun',
-    guide: { en: '{p}meme' }
+    shortDescription: {
+      en: "Get random anime meme (animemes or anime_irl)"
+    },
+    longDescription: {
+      en: "Gets a random anime meme from meme-api.com"
+    },
+    category: "fun",
+    guide: {
+      en: "{pn} - Random anime meme"
+    }
   },
 
-  onStart: async function ({ event, api, args }) {
-    const request = require('request');
-    const fs = require('fs-extra');
-    const axios = require('axios');
+  onStart: async function({ message }) {
+    // দুই API থেকে একটিকে random নিও
+    const apis = [
+      "https://meme-api.com/gimme/animemes",
+      "https://meme-api.com/gimme/anime_irl"
+    ];
+    const apiEndpoint = apis[Math.floor(Math.random() * apis.length)];
 
     try {
-      const response = await axios.get('https://www.reddit.com/r/anime_irl+animemes+Animemes+Memes_Of_The_Dank+awwnime/top.json?sort=top&t=week&limit=100');
-      const posts = response.data.data.children;
-      const post = posts[Math.floor(Math.random() * posts.length)].data;
+      const res = await axios.get(apiEndpoint, { timeout: 10000 });
+      if (!res.data.url) throw new Error("No meme image found!");
+      const { title, url: imgUrl, postLink, author } = res.data;
 
-      const title = post.title;
-      const imageUrl = post.url;
+      // ফাইল এক্সটেনশন guess
+      let ext = ".jpg";
+      if (imgUrl.endsWith(".png")) ext = ".png";
+      else if (imgUrl.endsWith(".gif")) ext = ".gif";
+      else if (imgUrl.endsWith(".webp")) ext = ".webp";
 
-      const callback = () => {
-        api.sendMessage({
-          body: `Title: ${title}`,
-          attachment: fs.createReadStream(__dirname + '/tmp/animeme.png')
-        }, event.threadID, () => fs.unlinkSync(__dirname + '/tmp/animeme.png'), event.messageID);
-      };
+      const cacheDir = path.join(__dirname, "cache");
+      await fs.ensureDir(cacheDir);
+      const filePath = path.join(cacheDir, `animeme_${Date.now()}${ext}`);
 
-      request(encodeURI(imageUrl)).pipe(fs.createWriteStream(__dirname + '/tmp/animeme.png')).on('close', callback);
-    } catch (error) {
-      console.error(error);
-      await api.sendMessage('Error occurred while fetching an anime meme!', event.threadID);
+      // ডাউনলোড ইমেজ
+      const imgFile = await axios.get(imgUrl, { responseType: "arraybuffer" });
+      await fs.writeFile(filePath, Buffer.from(imgFile.data, "binary"));
+
+      // মেসেজ reply
+      await message.reply({
+        body: `🎭 Anime Meme\n${title || ""}\n🔗 ${postLink || ""}\n👤 ${author ? `by u/${author}` : ""}`,
+        attachment: fs.createReadStream(filePath)
+      });
+
+      // ক্লিনআপ
+      fs.unlink(filePath, () => {});
+
+    } catch (err) {
+      console.error("animeme API error:", err.message);
+      await message.reply("❌ Couldn't fetch an anime meme from the API. Try again later.");
     }
   }
 };
+        
