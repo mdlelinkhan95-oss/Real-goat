@@ -13,29 +13,21 @@ module.exports = {
     shortDescription: "Shows admin info with photo",
     longDescription: "Shows developer/admin bio with photo attachment",
     category: "info",
-    guide: {
-      en: "{pn}"
-    }
+    guide: { en: "{pn}" }
   },
 
   onStart: async function({ message }) {
     const links = [
       "https://i.imgur.com/glAV4Jf.jpeg",
       "https://i.imgur.com/rdR9VC8.jpeg"
-      // এখানে চাইলে আরও ইমেজ লিংক যোগ করুন
     ];
-
-    // র‍্যান্ডম ছবি সিলেকশন
     const imgUrl = links[Math.floor(Math.random() * links.length)];
     const cacheDir = path.join(__dirname, "cache");
     await fs.ensureDir(cacheDir);
     const imgPath = path.join(cacheDir, `admin_${Date.now()}.jpg`);
-
     try {
       const res = await axios.get(imgUrl, { responseType: "arraybuffer" });
       await fs.writeFile(imgPath, Buffer.from(res.data, "binary"));
-
-      // তথ্য message
       const info = 
 `𝗗𝗢 𝗡𝗢𝗧 𝗧𝗥𝗨𝗦𝗧 𝗧𝗛𝗘 𝗕𝗢𝗧 𝗢𝗣𝗘𝗥𝗔𝗧𝗢𝗥
 ------------------------------------------------
@@ -57,12 +49,11 @@ module.exports = {
         body: info,
         attachment: fs.createReadStream(imgPath)
       });
-      
-      fs.unlink(imgPath, () => {});
+      setTimeout(() => fs.unlink(imgPath, () => {}), 5000);
     } catch (err) {
-      await message.reply("❌ Could not fetch admin image.");
+      await message.reply(`❌ Could not fetch admin image.\n${err.message}`);
       if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
     }
   }
 };
-	  
+	      
