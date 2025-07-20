@@ -1,145 +1,108 @@
-const axios = require('axios');
+const axios = require("axios");
 
 module.exports = {
-  config: {
-    name: "spy2",
-    version: "3.0",
-    author: "xnil6x",
-    role: 0,
-    shortDescription: "Advanced Facebook profile lookup",
-    longDescription: "Fetch Facebook profile info using UID, profile link, mention, or message reply",
-    category: "Utility",
-    guide: {
-      en: "{p}fbstalk [uid/link/mention/reply]"
-    }
-  },
-
-  onStart: async function ({ message, api, event, args }) {
-    try {
-      const apiKey = "xnil69x"; // Replace with your actual API key
-
-      const formatInfo = (label, value) => {
-        if (!value || value === "not available") return "";
-        return `🔹 ${label}: ${value}\n`;
-      };
-
-      const formatArrayInfo = (label, array) => {
-        if (!Array.isArray(array) || array.length === 0) return "";
-        const items = array.map(item => item.name || item).join(', ');
-        return `🔹 ${label}: ${items}\n`;
-      };
-
-      const getUID = async (input) => {
-        if (/^\d+$/.test(input)) return input; // If input is a UID, return it directly
-
-        if (input.includes("facebook.com")) {
-          const username = input.match(/(?:https?:\/\/)?(?:www\.)?facebook\.com\/([^\/]+)/)?.[1];
-          if (username) {
-            const res = await axios.get(`https://xnilapi-glvi.onrender.com/xnil/fbstalk?username=${username}&key=${apiKey}`);
-            return res.data.success ? res.data.id : null;
-          }
-        }
-
-        if (input.startsWith("@")) {
-          const mention = Object.entries(event.mentions).find(([_, name]) => name === input.slice(1));
-          return mention ? mention[0] : null;
-        }
-
-        return null;
-      };
-
-      let targetUID;
-
-      if (event.messageReply) {
-        targetUID = event.messageReply.senderID;
-      } else if (!args[0]) {
-        targetUID = event.senderID;
-      } else {
-        targetUID = await getUID(args[0]);
-      }
-
-      if (!targetUID) {
-        return message.reply("❌ Invalid input. Please provide a UID, profile link, mention, or reply to a message.");
-      }
-
-      api.sendMessage("🔍 Fetching profile information...", event.threadID);
-
-      const response = await axios.get(`https://xnilapi-glvi.onrender.com/xnil/fbstalk?uid=${targetUID}&key=${apiKey}`);
-      const user = response.data;
-
-      if (!user.success) {
-        return api.sendMessage("❌ Failed to fetch user data or profile is private", event.threadID);
-      }
-
-      let formattedInfo = `🌟 𝗖𝗢𝗠𝗣𝗟𝗘𝗧𝗘 𝗣𝗥𝗢𝗙𝗜𝗟𝗘 𝗜𝗡𝗙𝗢𝗥𝗠𝗔𝗧𝗜𝗢𝗡\n━━━━━━━━━━━━━━━━━━━━━\n`;
-
-      // Basic Info
-      formattedInfo += formatInfo("🆔 User ID", user.id);
-      formattedInfo += formatInfo("👤 Name", user.name);
-      formattedInfo += formatInfo("📛 Full Name", 
-        [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '));
-      formattedInfo += formatInfo("🔗 Username", user.username);
-      formattedInfo += formatInfo("🌐 Profile Link", user.link);
-
-      // Personal Info
-      formattedInfo += formatInfo("📝 About", user.about);
-      formattedInfo += formatInfo("🎂 Birthday", user.birthday);
-      formattedInfo += formatInfo("👫 Gender", user.gender);
-      formattedInfo += formatInfo("💑 Relationship", user.relationship_status);
-      formattedInfo += formatInfo("📍 Location", user.location);
-      formattedInfo += formatInfo("🛕 Religion", user.religion);
-      formattedInfo += formatInfo("🏠 Hometown", user.hometown);
-
-      // Education
-      if (user.highSchoolName || user.collegeName) {
-        formattedInfo += `📚 𝗘𝗱𝘂𝗰𝗮𝘁𝗶𝗼𝗻:\n`;
-        formattedInfo += formatInfo("🏫 High School", user.highSchoolName);
-        formattedInfo += formatInfo("🎓 College", user.collegeName);
-      }
-
-      // Arrays
-      formattedInfo += formatArrayInfo("🗣️ Languages", user.languages);
-      formattedInfo += formatArrayInfo("⚽ Sports", user.sports);
-      formattedInfo += formatArrayInfo("🏆 Favorite Teams", user.favorite_teams);
-      formattedInfo += formatArrayInfo("🏅 Favorite Athletes", user.favorite_athletes);
-
-      // Additional Info
-      formattedInfo += formatInfo("👥 Followers", user.follower);
-      formattedInfo += formatInfo("📅 Account Created", 
-        user.created_time ? new Date(user.created_time).toLocaleString() : null);
-      formattedInfo += formatInfo("🔄 Last Updated", 
-        user.updated_time ? new Date(user.updated_time).toLocaleString() : null);
-
-      formattedInfo += `━━━━━━━━━━━━━━━━━━━━━`;
-
-      const attachments = [];
-      
-      if (user.picture) {
-        try {
-          const profilePic = await global.utils.getStreamFromURL(user.picture);
-          attachments.push(profilePic);
-        } catch (e) {
-          console.error("Failed to get profile picture:", e);
-        }
-      }
-
-      if (user.cover) {
-        try {
-          const coverPhoto = await global.utils.getStreamFromURL(user.cover);
-          attachments.push(coverPhoto);
-        } catch (e) {
-          console.error("Failed to get cover photo:", e);
-        }
-      }
-
-      await api.sendMessage({
-        body: formattedInfo,
-        attachment: attachments
-      }, event.threadID);
-
-    } catch (error) {
-      console.error("FBStalk Error:", error);
-      api.sendMessage("⚠️ An error occurred. Please try again later.", event.threadID);
-    }
-  }
+ config: {
+ name: "spy",
+ aliases: ["whoishe", "whoisshe", "whoami", "stalk"],
+ version: "2.0",
+ role: 0,
+ author: "xnil6x",
+ description: "Get detailed user information with elegant presentation",
+ category: "information",
+ countDown: 5,
+ },
+ 
+ onStart: async function({ event, message, usersData, api, args }) {
+ const uid1 = event.senderID;
+ const uid2 = Object.keys(event.mentions)[0];
+ let uid;
+ 
+ if (args[0]) {
+ if (/^\d+$/.test(args[0])) {
+ uid = args[0];
+ } else {
+ const match = args[0].match(/profile\.php\?id=(\d+)/);
+ if (match) uid = match[1];
+ }
+ }
+ 
+ uid = uid || (event.type === "message_reply" ? event.messageReply.senderID : uid2 || uid1);
+ 
+ try {
+ const [userInfo, avatarUrl, userData, allUsers] = await Promise.all([
+ api.getUserInfo(uid),
+ usersData.getAvatarUrl(uid),
+ usersData.get(uid),
+ usersData.getAll()
+ ]);
+ 
+ const genderMap = {
+ 1: "♀️ Girl",
+ 2: "♂️ Boy",
+ undefined: "🌈 Custom"
+ };
+ 
+ const formatMoney = num => {
+ if (isNaN(num)) return "0";
+ const units = ["", "K", "M", "B", "T"];
+ let unit = 0;
+ while (num >= 1000 && unit < units.length - 1) {
+ num /= 1000;
+ unit++;
+ }
+ return num.toFixed(1).replace(/\.0$/, "") + units[unit];
+ };
+ 
+ const getRank = (id, key) => {
+ const sorted = [...allUsers].sort((a, b) => b[key] - a[key]);
+ return sorted.findIndex(u => u.userID === id) + 1;
+ };
+ 
+ const info = userInfo[uid];
+ const stats = {
+ money: userData.money || 0,
+ exp: userData.exp || 0,
+ rank: getRank(uid, 'exp'),
+ moneyRank: getRank(uid, 'money')
+ };
+ 
+ const createBox = (title, items) => {
+ let box = `╭─── ✦ ${title} ✦ ───\n`;
+ items.forEach(([key, value]) => {
+ box += `├─ ${key}: ${value}\n`;
+ });
+ box += `╰────────────────`;
+ return box;
+ };
+ 
+ const profileBox = createBox("PROFILE", [
+ ["🎭 Name", info.name],
+ ["🧬 Gender", genderMap[info.gender] || "Unknown"],
+ ["🆔 UID", uid],
+ ["👑 Status", info.type?.toUpperCase() || "Regular User"],
+ ["🏷️ Username", info.vanity || "None"],
+ ["🎂 Birthday", info.isBirthday || "Private"],
+ ["💫 Nickname", info.alternateName || "None"],
+ ["🤖 Bot Friend", info.isFriend ? "✅ Yes" : "❌ No"]
+ ]);
+ 
+ const statsBox = createBox("STATISTICS", [
+ ["💰 Money", `$${formatMoney(stats.money)}`],
+ ["⭐ Experience", stats.exp],
+ ["🏆 Rank", `#${stats.rank}/${allUsers.length}`],
+ ["💎 Wealth Rank", `#${stats.moneyRank}/${allUsers.length}`]
+ ]);
+ 
+ const profileUrl = `🌐 Profile: ${info.profileUrl}`;
+ 
+ await message.reply({
+ body: `${profileBox}\n\n${statsBox}\n\n${profileUrl}`,
+ attachment: await global.utils.getStreamFromURL(avatarUrl)
+ });
+ 
+ } catch (error) {
+ console.error("Spy Command Error:", error);
+ message.reply("🔍 Couldn't spy on this user. They might be wearing an invisibility cloak!");
+ }
+ }
 };
