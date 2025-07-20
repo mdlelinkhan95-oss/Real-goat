@@ -2,7 +2,7 @@ const axios = require("axios");
 
 module.exports = {
  config: {
- name: "spy",
+ name: "spy2",
  aliases: ["whoishe", "whoisshe", "whoami", "stalk"],
  version: "2.0",
  role: 0,
