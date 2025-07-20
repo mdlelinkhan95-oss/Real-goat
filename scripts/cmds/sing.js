@@ -1,162 +1,130 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-
-const baseApiUrl = async () => {
-  const base = await axios.get(
-    "https://raw.githubusercontent.com/nazrul4x/Noobs/main/Apis.json"
-  );
-  return base.data.api;
-};
+const axios = require("axios");
+const fs = require("fs-extra");
+const { getStreamFromURL } = global.utils;
 
 module.exports = {
-    config: {
-        name: "sing",
-        aliases: ["music", "searchsong"],
-        version: "1.6.9",
-        author: "Nazrul",
-        countDowns: 20,
-        role: 0,
-        description: "Search or Download YouTube Songs",
-        category: "Media",
-        guide: {
-            en: "use {pn} song songName or YouTube link"
-        }
+  config: {
+    name: "sing",
+    version: "1.14",
+    aliases: ["song", "music", "play"],
+    author: "xnil6x",
+    countDown: 5,
+    role: 0,
+    description: {
+      en: "Download audio from YouTube"
     },
-
-    onStart: async function ({ api, event, args }) {
-        const songQuery = args.join(" ").trim();
-        const isUrl = songQuery.startsWith('https://') || songQuery.startsWith('http://');
-
-        if (isUrl) {
-            await this.downloadSong(api, event, songQuery);
-        } else if (songQuery.length > 0) {
-            await this.searchSong(api, event, songQuery);
-        } else {
-            api.sendMessage("🎵 Please provide a Song Name or YouTube URL!", event.threadID, event.messageID);
-        }
-    },
-
-    downloadSong: async function (api, event, songUrl, songTitle = "Unknown", songDuration = "Unknown") {
-        try {
-            const res = await axios.get(`${await baseApiUrl()}/nazrul/ytMp3?url=${encodeURIComponent(songUrl)}`);
-            const songData = res.data;
-
-            if (!songData.d_url) {
-                throw new Error('Download link not found!');
-            }
-
-            const songPath = path.resolve(__dirname, 'song.mp3');
-            const writer = fs.createWriteStream(songPath);
-            const songStream = (await axios.get(songData.d_url, { responseType: 'stream' })).data;
-
-            songStream.pipe(writer);
-
-            writer.on('finish', async () => {
-                await api.sendMessage({
-                    body: `🎶 Here's your Song!\n\n♡ 𝐓𝐢𝐭𝐥𝐞: ${songData.title}\n♡ 𝐃𝐮𝐫𝐚𝐭𝐢𝐨𝐧: ${songDuration}`,
-                    attachment: fs.createReadStream(songPath)
-                }, event.threadID, () => fs.unlinkSync(songPath), event.messageID);
-            });
-
-            writer.on('error', (error) => {
-                console.error('Error downloading the song:', error);
-                api.sendMessage(`❌ Error: ${error.message}`, event.threadID, event.messageID);
-            });
-        } catch (error) {
-            console.error('An error occurred:', error.message);
-            api.sendMessage(`❌ Error: ${error.message}`, event.threadID, event.messageID);
-        }
-    },
-
-    searchSong: async function (api, event, query) {
-        if (!query) {
-            return api.sendMessage("🎵 Please provide a Song Name!", event.threadID, event.messageID);
-        }
-
-        try {
-            const res = await axios.get(`${await baseApiUrl()}/nazrul/ytSearch?query=${encodeURIComponent(query)}`);
-            const searchData = res.data;
-
-            if (!searchData || searchData.length === 0) {
-                throw new Error('No results found for your query!');
-            }
-
-            const maxResults = Math.min(searchData.length, 10);
-            let replyMessage = "✅ Here are the top 10 search results:\n\n";
-            const attachments = [];
-            const attachmentPaths = [];
-
-            for (let i = 0; i < maxResults; i++) {
-                const song = searchData[i];
-                replyMessage += `♡ Song No. #${i + 1}:\n`;
-                replyMessage += `👑 Title: ${song.title}\n`;
-                replyMessage += `🔖 Duration: ${song.timestamp}\n`;
-
-                const thumbnailPath = path.resolve(__dirname, `thumbnail_${i + 1}.jpg`);
-                const writer = fs.createWriteStream(thumbnailPath);
-                const thumbnailStream = (await axios.get(song.thumbnail, { responseType: 'stream' })).data;
-
-                thumbnailStream.pipe(writer);
-
-                await new Promise((resolve) => writer.on('finish', resolve));
-                attachments.push(fs.createReadStream(thumbnailPath));
-                attachmentPaths.push(thumbnailPath);
-            }
-
-            api.sendMessage(
-                {
-                    body: replyMessage,
-                    attachment: attachments
-                },
-                event.threadID,
-                (error, info) => {
-                    if (!error) {
-                        global.GoatBot.onReply.set(info.messageID, {
-                            commandName: this.config.name,
-                            type: "reply",
-                            messageID: info.messageID,
-                            author: event.senderID,
-                            searchData: searchData,
-                            attachmentPaths
-                        });
-                    }
-                },
-                event.messageID
-            );
-
-        } catch (error) {
-            console.error('An error occurred:', error.message);
-            api.sendMessage(`❌ Error: ${error.message}`, event.threadID, event.messageID);
-        }
-    },
-
-    onReply: async function ({ api, event, Reply }) {
-        try {
-            const { searchData, attachmentPaths } = Reply;
-            const choice = parseInt(event.body.trim()) - 1;
-
-            if (isNaN(choice) || choice < 0 || choice >= searchData.length) {
-                return api.sendMessage("🎵 Invalid choice. Please reply with a valid number.", event.threadID, event.messageID);
-            }
-
-            const selectedSong = searchData[choice];
-            const songUrl = selectedSong.url;
-
-            api.unsendMessage(Reply.messageID);
-
-            if (attachmentPaths) {
-                attachmentPaths.forEach((thumbnailPath) => {
-                    if (fs.existsSync(thumbnailPath)) {
-                        fs.unlinkSync(thumbnailPath);
-                    }
-                });
-            }
-
-            await this.downloadSong(api, event, songUrl, selectedSong.title, selectedSong.timestamp);
-        } catch (error) {
-            console.error('An error occurred:', error.message);
-            api.sendMessage(`❌ Error: ${error.message}`, event.threadID, event.messageID);
-        }
+    category: "media",
+    guide: {
+      en: "{pn} [<song name>|<song link>]: Use this command to download audio from YouTube.\n   Example:\n{pn} chipi chipi chapa chapa"
     }
+  },
+  langs: {
+    en: {
+      error: "❌ An error occurred: %1",
+      noResult: "⭕ No search results match the keyword %1. Please try again.",
+      choose: "🎶 Select a song from the list below by replying with the number or type any text to cancel.\n\n%1",
+      audio: "Audio: ",
+      noAudio: "⭕ Sorry, no audio was found with a size less than 26MB.",
+      playing: "🎧 Now playing: %1",
+      selectSong: "Select a song by typing the number corresponding to it.",
+      invalidChoice: "❌ Invalid choice. Please enter a number between 1 and 6."
+    }
+  },
+  onStart: async function({ args, message, event, commandName, getLang }) {
+    const checkurl = /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))((\w|-){11})(?:\S+)?$/;
+    const urlYtb = checkurl.test(args[0]);
+    if (urlYtb) {
+      const infoVideo = await getVideoInfo(args[0]);
+      handle({ infoVideo, message, downloadFile, getLang });
+      return;
+    }
+    
+    let keyWord = args.join(" ");
+    keyWord = keyWord.includes("?feature=share") ? keyWord.replace("?feature=share", "") : keyWord;
+    const maxResults = 6;
+    let result;
+    try {
+      result = (await search(keyWord)).slice(0, maxResults);
+    } catch (err) {
+      return message.reply(getLang("error", err.message));
+    }
+    
+    if (result.length === 0)
+      return message.reply(getLang("noResult", keyWord));
+    
+    let msg = "";
+    let i = 1;
+    const thumbnails = [];
+    for (const info of result) {
+      thumbnails.push(getStreamFromURL(info.thumbnail));
+      msg += `╭────────── ${i++} ──────────╮\n`;
+      msg += `│ 🎵 Title: ${info.title}\n`;
+      msg += `│ ⏱ Duration: ${info.time}\n`;
+      msg += `│ 📺 Channel: ${info.channel.name}\n`;
+      msg += `╰──────────────────────╯\n\n`;
+    }
+    
+    message.reply({
+      body: getLang("choose", msg),
+      attachment: await Promise.all(thumbnails)
+    }, (err, info) => {
+      global.GoatBot.onReply.set(info.messageID, {
+        commandName,
+        messageID: info.messageID,
+        author: event.senderID,
+        result
+      });
+    });
+  },
+  
+  onReply: async ({ event, api, Reply, message, getLang }) => {
+    const { result } = Reply;
+    const choice = parseInt(event.body);
+    if (!isNaN(choice) && choice <= result.length && choice > 0) {
+      const infoChoice = result[choice - 1];
+      const idvideo = infoChoice.id;
+      const videoUrl = `https://www.youtube.com/watch?v=${idvideo}`;
+      const response = await axios.get(`https://xnilapi-glvi.onrender.com/xnil/ytmp3?url=${videoUrl}`);
+      
+      const title = response.data.data.info.title;
+      const vid = response.data.data.media;
+      await message.unsend(Reply.messageID);
+      message.reply({
+        body: getLang("playing", title),
+        attachment: await global.utils.getStreamFromURL(vid)
+      });
+    } else {
+      message.reply(getLang("invalidChoice"));
+    }
+  }
 };
+
+async function search(keyWord) {
+  try {
+    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(keyWord)}`;
+    const res = await axios.get(url);
+    const getJson = JSON.parse(res.data.split("ytInitialData = ")[1].split(";</script>")[0]);
+    const videos = getJson.contents.twoColumnSearchResultsRenderer.primaryContents.sectionListRenderer.contents[0].itemSectionRenderer.contents;
+    const results = [];
+    for (const video of videos) {
+      if (video.videoRenderer?.lengthText?.simpleText) {
+        results.push({
+          id: video.videoRenderer.videoId,
+          title: video.videoRenderer.title.runs[0].text,
+          thumbnail: video.videoRenderer.thumbnail.thumbnails.pop().url,
+          time: video.videoRenderer.lengthText.simpleText,
+          channel: {
+            name: video.videoRenderer.ownerText.runs[0].text
+          },
+          artist: video.videoRenderer.ownerText.runs[0].text,
+          genre: "Not available"
+        });
+      }
+    }
+    return results;
+  } catch (e) {
+    const error = new Error("Cannot search video");
+    error.code = "SEARCH_VIDEO_ERROR";
+    throw error;
+  }
+      }
