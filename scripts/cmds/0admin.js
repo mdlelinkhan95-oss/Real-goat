@@ -1,59 +1,48 @@
-const axios = require("axios");
-const fs = require("fs-extra");
-const path = require("path");
-
-module.exports = {
-  config: {
+module.exports.config = {
     name: "admin",
-    aliases: [],
-    version: "1.0.1",
-    author: "Abdulla Rahaman",
-    countDown: 1,
-    role: 0,
-    shortDescription: "Shows admin info with photo",
-    longDescription: "Shows developer/admin bio with photo attachment",
-    category: "info",
-    guide: { en: "{pn}" }
-  },
-
-  onStart: async function({ message }) {
-    const links = [
-      "https://i.imgur.com/glAV4Jf.jpeg",
-      "https://i.imgur.com/rdR9VC8.jpeg"
-    ];
-    const imgUrl = links[Math.floor(Math.random() * links.length)];
-    const cacheDir = path.join(__dirname, "cache");
-    await fs.ensureDir(cacheDir);
-    const imgPath = path.join(cacheDir, `admin_${Date.now()}.jpg`);
-    try {
-      const res = await axios.get(imgUrl, { responseType: "arraybuffer" });
-      await fs.writeFile(imgPath, Buffer.from(res.data, "binary"));
-      const info = 
-`𝗗𝗢 𝗡𝗢𝗧 𝗧𝗥𝗨𝗦𝗧 𝗧𝗛𝗘 𝗕𝗢𝗧 𝗢𝗣𝗘𝗥𝗔𝗧𝗢𝗥
-------------------------------------------------
-𝗡𝗮𝗺𝗲           : 𝘼𝙗𝙙𝙪𝙡𝙡𝙖 𝙍𝙖𝙝𝙖𝙢𝙖𝙣
-𝗙𝗮𝗰𝗲𝗯𝗼𝗼𝗸       : 𝘼𝙗𝙙𝙪𝙡𝙡𝙖 𝙍𝙖𝙝𝙖𝙢𝙖𝙣
-𝗥𝗲𝗹𝗶𝗴𝗶𝗼𝗻        : (𝗜𝘀𝗹𝗮𝗺)
-𝗣𝗲𝗿𝗺𝗮𝗻𝗲𝗻𝘁 𝗔𝗱𝗱𝗿𝗲𝘀𝘀 : (𝗗𝗵𝗮𝗸𝗮)
-𝗖𝘂𝗿𝗿𝗲𝗻𝘁 𝗔𝗱𝗱𝗿𝗲𝘀𝘀   : 𝘿𝙝𝙖𝙠𝙖, 𝘽𝙖𝙣𝙜𝙡𝙖𝙙𝙚𝙨𝙝
-𝗚𝗲𝗻𝗱𝗲𝗿           : (𝗠𝗮𝗹𝗲)
-𝗔𝗴𝗲                : (20)
-𝗥𝗲𝗹𝗮𝘁𝗶𝗼𝗻𝘀𝗵𝗶𝗽     : (𝗦𝗶𝗻𝗴𝗹𝗲)
-𝗪𝗼𝗿𝗸               : 𝙎𝙩𝙪𝙙𝙮
-𝗚𝗺𝗮𝗶𝗹              : rahamanabdulla653@gmail.com
-𝗪𝗵𝗮𝘁𝘀𝗔𝗽𝗽           : wa.me/+8801864600368
-𝗧𝗲𝗹𝗲𝗴𝗿𝗮𝗺           : t.me/abdullarahaman49
-𝗙𝗯 𝗹𝗶𝗻𝗸            : https://www.facebook.com/abdullah.rahaman.49`;
-
-      await message.reply({
-        body: info,
-        attachment: fs.createReadStream(imgPath)
-      });
-      setTimeout(() => fs.unlink(imgPath, () => {}), 5000);
-    } catch (err) {
-      await message.reply(`❌ Could not fetch admin image.\n${err.message}`);
-      if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-    }
+    version: "1.0.0",
+    permission: 0,
+    credits: "nayan",
+    prefix: true,
+    description: "",
+    category: "prefix",
+    usages: "",
+    cooldowns: 5,
+    dependencies: 
+	{
+    "request":"",
+    "fs-extra":"",
+    "axios":""
   }
 };
-	      
+module.exports.run = async function({ api,event,args,client,Users,Threads,__GLOBAL,Currencies }) {
+const axios = global.nodemodule["axios"];
+const request = global.nodemodule["request"];
+const fs = global.nodemodule["fs-extra"];
+const time = process.uptime(),
+		hours = Math.floor(time / (60 * 60)),
+		minutes = Math.floor((time % (60 * 60)) / 60),
+		seconds = Math.floor(time % 60);
+const moment = require("moment-timezone");
+var juswa = moment.tz("Asia/Dhaka").format("『D/MM/YYYY』 【hh:mm:ss】");
+  
+var callback = () => api.sendMessage({body:`
+--------------------------------------------
+𝐍𝐚𝐦𝐞        : 𝗔𝗹𝗶𝗳 𝗛𝗼𝘀𝘀𝗼𝗻
+𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : 𝗔𝗹𝗶𝗳 𝗛𝗼𝘀𝘀𝗼𝗻
+𝐑𝐞𝐥𝐢𝐠𝐢𝐨𝐧   : 𝐈𝐬𝐥𝐚𝐦
+𝐏𝐞𝐫𝐦𝐚𝐧𝐞𝐧𝐭 𝐀𝐝𝐝𝐫𝐞𝐬𝐬: (𝐃𝐡𝐚𝐤𝐚,)
+𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐀𝐝𝐝𝐫𝐞𝐬𝐬: 𝗗𝗵𝗮𝗸𝗮 𝗚𝗮𝘇𝗶𝗽𝘂𝗿,
+𝐆𝐞𝐧𝐝𝐞𝐫.   : (𝐌𝐚𝐥𝐞)
+𝐀𝐠𝐞           : (𝟏𝟖+)
+𝐑𝐞𝐥𝐚𝐭𝐢𝐨𝐧𝐬𝐡𝐢𝐩 : (𝐒𝐢𝐧𝐠𝐥𝐞)
+𝐖𝐨𝐫𝐤        : (𝐒𝐭𝐮𝐝𝐞𝐧𝐭)
+𝐆𝐦𝐚𝐢𝐥       : alifhosson5@gmail.com
+𝐖𝐡𝐚𝐭𝐬𝐀𝐩𝐩: wa.me/+8801615623399
+𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦  : t.me/alifhosson
+𝐌𝐲 𝐁𝐢𝐨   : https://bio.link/alifhosson
+𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 𝐋𝐢𝐧𝐤 : https://www.facebook.com/Alifhosson.xxx`,attachment: fs.createReadStream(__dirname + "/cache/1.png")}, event.threadID, () => 
+    fs.unlinkSync(__dirname + "/cache/1.png"));  
+      return request(encodeURI(`https://graph.facebook.com/100075421394195/picture?height=720&width=720&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`)).pipe(
+fs.createWriteStream(__dirname+'/cache/1.png')).on('close',() => callback());
+   };
