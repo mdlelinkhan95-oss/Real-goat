@@ -1,64 +1,49 @@
 const axios = require('axios');
 const jimp = require("jimp");
-const fs = require("fs");
+const fs = require("fs")
 
 module.exports = {
-    config: {
-        name: "arrest",
-        aliases: ["arrest"],
-        version: "1.0",
-        author: "milan-says",
-        countDown: 5,
-        role: 0,
-        shortDescription: "arrest the rapist",
-        longDescription: "",
-        category: "fun",
-        guide: {
-            vi: "{pn} [@tag]",
-            en: "{pn} [@tag]"
-        }
-    },
+	config: {
+		name: "arrest",
+		aliases: ["arrest"],
+		version: "1.0",
+		author: "milan-says",
+		countDown: 5,
+		role: 0,
+		shortDescription: "arret the rapist",
+		longDescription: "",
+		category: "image",
+		guide:  {
+			vi: "{pn} [@tag]",
+			en: "{pn} [@tag]"
+		}
+	},
 
-    onStart: async function ({ message, args, api, event }) {
-        const mentions = Object.keys(event.mentions);
-        if (mentions.length === 0) {
-            return message.reply("Please mention someone.");
-        }
-
-        const one = event.senderID;
-        const two = mentions[0];
-
-        try {
-            const imagePath = await generateImage(one, two);
-            await message.reply({
-                body: "You are under arrest",
-                attachment: fs.createReadStream(imagePath)
-            });
-            fs.unlinkSync(imagePath); // Clean up the file after sending
-        } catch (error) {
-            console.error(error);
-            message.reply("An error occurred while processing the image.");
+	onStart: async function ({ message, args,api , event, user }) {
+        const mention = Object.keys(event.mentions);
+        if (mention.length == 0) return message.reply("please mention someone");
+        else if (mention.length == 1) {
+            const one = event.senderID, two = mention[0];
+            bal(one, two).then(ptth => { message.reply({ body: "You are under arrest", attachment: fs.createReadStream(ptth) }) })
+        } else {
+            const one = mention[1], two = mention[0];
+            bal(one, two).then(ptth => { message.reply({ body: "You are under arrest", attachment: fs.createReadStream(ptth) }) })
         }
     }
+
+
 };
 
-async function generateImage(one, two) {
-    try {
-        const avone = await jimp.read(`https://graph.facebook.com/${one}/picture?width=512&height=512`);
-        const avtwo = await jimp.read(`https://graph.facebook.com/${two}/picture?width=512&height=512`);
+async function bal(one, two) {
 
-        avone.circle();
-        avtwo.circle();
+   let avone = await jimp.read(`https://graph.facebook.com/${one}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`)
+    avone.circle()
+    let avtwo = await jimp.read(`https://graph.facebook.com/${two}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`)
+    avtwo.circle()
+    let pth = "fak.png"
+    let img = await jimp.read("https://i.imgur.com/ep1gG3r.png")
+    img.resize(500, 500).composite(avone.resize(100, 100), 375, 9).composite(avtwo.resize(100, 100), 160, 92);
 
-        const img = await jimp.read("https://i.imgur.com/ep1gG3r.png");
-        img.resize(500, 500)
-            .composite(avone.resize(100, 100), 375, 9)
-            .composite(avtwo.resize(100, 100), 160, 92);
-
-        const filePath = `./temp_${Date.now()}.png`;
-        await img.writeAsync(filePath);
-        return filePath;
-    } catch (error) {
-        throw new Error("Failed to generate image: " + error.message);
+    await img.writeAsync(pth)
+    return pth
     }
-}
