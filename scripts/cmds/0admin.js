@@ -1,5 +1,4 @@
 const axios = require("axios");
-const moment = require("moment-timezone");
 
 module.exports = {
   config: {
@@ -33,16 +32,14 @@ module.exports = {
 insta  : (private)
 𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 𝐋𝐢𝐧𝐤 : https://www.facebook.com/x4x.rafi`;
 
-      // এখানে তোমার Imgur (বা অন্য যেকোনো) image link দাও:
-      const imgUrl = "https://i.imgur.com/mZfkUd2.jpeg"; // এখানে Imgur লিংক/ public jpg/png লিংক
-      // cloudinary বা অন্য কোনো ডাইরেক্ট লিংকও দিতে পারো, যেম;
+      // এখানে Imgur লিংক দিন
+      const imgUrl = "https://i.imgur.com/iVxN5Z8.jpeg";
 
-      // সরাসরি stream আনে, cache/folder কিছু লাগে না:
-      const imgStream = await global.utils.getStreamFromURL(imgUrl);
+      const res = await axios.get(imgUrl, { responseType: "stream", headers: { "User-Agent": "Mozilla/5.0" } });
 
       await message.reply({
         body: info,
-        attachment: imgStream
+        attachment: res.data
       });
 
     } catch (err) {
