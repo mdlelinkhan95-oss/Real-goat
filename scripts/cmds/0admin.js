@@ -1,6 +1,4 @@
 const axios = require("axios");
-const fs = require("fs-extra");
-const path = require("path");
 const moment = require("moment-timezone");
 
 module.exports = {
@@ -10,60 +8,42 @@ module.exports = {
     permission: 0,
     credits: "nayan",
     prefix: true,
-    description: "Shows admin info with photo",
+    description: "Shows admin info with photo (no cache)",
     category: "prefix",
     usages: "",
-    cooldowns: 5,
+    cooldowns: 5
   },
 
-  onStart: async function({ api, event, message }) {
+  onStart: async function({ message }) {
     try {
-      const start = process.uptime();
-      const hours = Math.floor(start / 3600);
-      const minutes = Math.floor((start % 3600) / 60);
-      const seconds = Math.floor(start % 60);
-      const timeString = moment.tz("Asia/Dhaka").format("『D/MM/YYYY』 【hh:mm:ss】");
-
       const info = `
 --------------------------------------------
-𝐍𝐚𝐦𝐞        : 𝗔𝗹𝗶𝗳 𝗛𝗼𝘀𝘀𝗼𝗻
-𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : 𝗔𝗹𝗶𝗳 𝗛𝗼𝘀𝘀𝗼𝗻
+𝐍𝐚𝐦𝐞        : R A F Iメ
+𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 : RAFI 卝 চৌধুরীヅ
 𝐑𝐞𝐥𝐢𝐠𝐢𝐨𝐧   : 𝐈𝐬𝐥𝐚𝐦
-𝐏𝐞𝐫𝐦𝐚𝐧𝐞𝐧𝐭 𝐀𝐝𝐝𝐫𝐞𝐬𝐬: (𝐃𝐡𝐚𝐤𝐚,)
-𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐀𝐝𝐝𝐫𝐞𝐬𝐬: 𝗗𝗵𝗮𝗸𝗮 𝗚𝗮𝘇𝗶𝗽𝘂𝗿,
+𝐏𝐞𝐫𝐦𝐚𝐧𝐞𝐧𝐭 𝐀𝐝𝐝𝐫𝐞𝐬𝐬: (Rangpur,)
+𝐂𝐮𝐫𝐫𝐞𝐧𝐭 𝐀𝐝𝐝𝐫𝐞𝐬𝐬: 𝗗𝗵𝗮𝗸𝗮,
 𝐆𝐞𝐧𝐝𝐞𝐫.   : (𝐌𝐚𝐥𝐞)
 𝐀𝐠𝐞           : (𝟏𝟖+)
-𝐑𝐞𝐥𝐚𝐭𝐢𝐨𝐧𝐬𝐡𝐢𝐩 : (𝐒𝐢𝐧𝐠𝐥𝐞)
+𝐑𝐞𝐥𝐚𝐭𝐢𝐨𝐧𝐬𝐡𝐢𝐩 : (mingle)
 𝐖𝐨𝐫𝐤        : (𝐒𝐭𝐮𝐝𝐞𝐧𝐭)
-𝐆𝐦𝐚𝐢𝐥       : alifhosson5@gmail.com
-𝐖𝐡𝐚𝐭𝐬𝐀𝐩𝐩: wa.me/+8801615623399
-𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦  : t.me/alifhosson
-𝐌𝐲 𝐁𝐢𝐨   : https://bio.link/alifhosson
-𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 𝐋𝐢𝐧𝐤 : https://www.facebook.com/Alifhosson.xxx`;
+𝐆𝐦𝐚𝐢𝐥       : (private)
+𝐖𝐡𝐚𝐭𝐬𝐀𝐩𝐩: (private)
+𝐓𝐞𝐥𝐞𝐠𝐫𝐚𝐦  : t.me/R_A_F_I_Official
+insta  : (private)
+𝐅𝐚𝐜𝐞𝐛𝐨𝐨𝐤 𝐋𝐢𝐧𝐤 : https://www.facebook.com/x4x.rafi`;
 
-      // ফোল্ডার রেডি করো
-      const cacheDir = path.join(__dirname, "cache");
-      await fs.ensureDir(cacheDir);
-      const imgPath = path.join(cacheDir, "1.png");
+      // এখানে তোমার Imgur (বা অন্য যেকোনো) image link দাও:
+      const imgUrl = "https://i.imgur.com/mZfkUd2.jpeg"; // এখানে Imgur লিংক/ public jpg/png লিংক
+      // cloudinary বা অন্য কোনো ডাইরেক্ট লিংকও দিতে পারো, যেম;
 
-      // 1. Modern Facebook ID/Profile Image fetch, fallback if not found
-      const imgUrl = "https://graph.facebook.com/100075421394195/picture?height=720&width=720";
-      // const imgUrl = "https://pplx-res.cloudinary.com/image/upload/v1753004910/user_uploads/16172130/2c593b26-2174-4fd2-b713-7031e4cf5cc0/1000263194.jpg"; // fallback link
-
-      try {
-        const res = await axios.get(imgUrl, { responseType: "arraybuffer" });
-        await fs.writeFile(imgPath, Buffer.from(res.data, "binary"));
-      } catch (e) {
-        // fallback image দিন এখানে
-        await fs.copyFile("path/to/backup_local_admin_img.png", imgPath);
-      }
+      // সরাসরি stream আনে, cache/folder কিছু লাগে না:
+      const imgStream = await global.utils.getStreamFromURL(imgUrl);
 
       await message.reply({
         body: info,
-        attachment: fs.createReadStream(imgPath)
+        attachment: imgStream
       });
-
-      setTimeout(() => fs.unlink(imgPath, () => {}), 5000);
 
     } catch (err) {
       console.error("Admin info CMD error:", err.message);
@@ -71,4 +51,3 @@ module.exports = {
     }
   }
 };
-	      
