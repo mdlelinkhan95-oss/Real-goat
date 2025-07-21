@@ -1,3 +1,12 @@
+const MAX_ATTEMPTS = 5; // প্রতি কল ৫টা পর্যন্ত চেষ্টা করবে, চাইলে বাড়াও
+
+function shuffle(array) { // Randomize, যাতে বারবার এক লিংক না পড়ে
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
 module.exports = {
   config: {
     name: "hvdo2",
@@ -7,7 +16,7 @@ module.exports = {
     countDown: 60,
     role: 2,
     shortDescription: "get hentai video",
-    longDescription: "it will send hentai  video",
+    longDescription: "it will send hentai video",
     category: "18+",
     guide: "{p}{n}hvdo",
   },
@@ -16,13 +25,13 @@ module.exports = {
 
   onStart: async function ({ api, event, message }) {
     const senderID = event.senderID;
-
     const loadingMessage = await message.reply({
       body: "Loading random hentai... Please wait! upto 5min 🤡",
     });
 
+    // এখানে তোমার ড্রাইভ লিংক list থাক
     const link = [
-        "https://drive.google.com/uc?export=download&id=1ywjcqK_AkWyxnRXjoB0JKLdChZsR69cK",
+      "https://drive.google.com/uc?export=download&id=1ywjcqK_AkWyxnRXjoB0JKLdChZsR69cK",
         "https://drive.google.com/uc?export=download&id=1xyC3bJWlmZVMoWJHYRLdX_dNibPVBDIV",
         "https://drive.google.com/uc?export=download&id=1whpsUv4Xzt3bp-QSlx03cLdwW2UsnEt2",
         "https://drive.google.com/uc?export=download&id=1wUaET9wLXH4vVBF3ilxOWybxPiqp2gEs",
@@ -140,30 +149,37 @@ module.exports = {
         "https://drive.google.com/uc?export=download&id=1-prVKuEIlMFsOxeDLZ3_y8A7HEUNmq6l",
         "https://drive.google.com/uc?export=download&id=1-oJvKu5Pv4xvGoA3Snk2H8WHNbr7sD2R",
         "https://drive.google.com/uc?export=download&id=1-7rYID9JMd38eg5NplPVFbD7jTE8NDyf",
-
-    
+      // তোমার বাকি লিংকগুলো এখানে যোগ করো
     ];
+    
+    shuffle(link); // Randomized order
 
-    const availableVideos = link.filter(video => !this.sentVideos.includes(video));
+    let videoFound = false, lastError;
 
-    if (availableVideos.length === 0) {
-      this.sentVideos = [];
+    for (let attempt = 0; attempt < MAX_ATTEMPTS && !videoFound; attempt++) {
+      const randomIndex = Math.floor(Math.random() * link.length);
+      const videoUrl = link[randomIndex];
+
+      try {
+        const stream = await global.utils.getStreamFromURL(videoUrl);
+        await message.reply({
+          body: 'make sure to watch full video🥵',
+          attachment: stream,
+        });
+        videoFound = true;
+      } catch (err) {
+        lastError = err;
+        // 404/stream error, তাই এই index কে বাদ দিয়ে পরেরটা try করবে
+      }
     }
 
-    const randomIndex = Math.floor(Math.random() * availableVideos.length);
-    const randomVideo = availableVideos[randomIndex];
+    setTimeout(() => {
+      api.unsendMessage(loadingMessage.messageID);
+    }, 5000);
 
-    this.sentVideos.push(randomVideo);
-
-    if (senderID !== null) {
-      message.reply({
-        body: 'make sure to watch full video🥵',
-        attachment: await global.utils.getStreamFromURL(randomVideo),
-      });
-
-      setTimeout(() => {
-        api.unsendMessage(loadingMessage.messageID);
-      }, 5000);
+    if (!videoFound) {
+      return message.reply("⚠️ Sorry, কোনো ভিডিও stream/fetch করা গেল না। সব ড্রাইভ লিংক dead বা ব্লকড! " + (lastError ? "\nError: " + lastError.message : ""));
     }
-  },
+  }
 };
+     
