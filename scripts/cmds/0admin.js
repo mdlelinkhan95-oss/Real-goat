@@ -34,6 +34,8 @@ insta  : (private)
 
       // এখানে Imgur লিংক দিন
       const imgUrl = "https://i.imgur.com/iVxN5Z8.jpeg";
+    "https://i.imgur.com/iVxN5Z8.jpeg";
+      
 
       const res = await axios.get(imgUrl, { responseType: "stream", headers: { "User-Agent": "Mozilla/5.0" } });
 
