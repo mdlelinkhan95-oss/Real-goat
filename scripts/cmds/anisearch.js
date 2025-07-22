@@ -1,78 +1,65 @@
 const axios = require('axios');
 
-async function getStreamFromURL(url) {
-  const response = await axios.get(url, { responseType: 'stream' });
-  return response.data;
-}
-
-async function fetchTikTokVideos(query) {
-  try {
-    const response = await axios.get(`https://mahi-apis.onrender.com/api/tiktok?search=${query}`);
-    return response.data.data;
-  } catch (error) {
-    console.error(error);
-    return null;
-  }
-}
-
 module.exports = {
-  config: {
-    name: "anisearch",
-    aliases: ["animeedit", "tiktoksearch"],
-    author: "Mahi--",
-    version: "2.1",
-    shortDescription: {
-      en: "Search for TikTok anime edit videos",
-    },
-    longDescription: {
-      en: "Search and fetch TikTok anime edit videos based on your query.",
-    },
-    category: "fun",
-    guide: {
-      en: "{p}{n} [query]",
-    },
-  },
-  onStart: async function ({ api, event, args }) {
-    api.setMessageReaction("✨", event.messageID, (err) => {}, true);
+  config: {
+    name: "anisearch",
+    version: "1.1",
+    author: "Vex_kshitiz (Modified by Perplexity)",
+    countDown: 10,
+    role: 0,
+    shortDescription: {
+      en: "Get anime edit video",
+    },
+    longDescription: {
+      en: "Search for specific anime edit videos.",
+    },
+    category: "media",
+    guide: {
+      en: "{p}{n} [anime name]",
+    },
+  },
 
-    const query = args.join(' ');
+  onStart: async function ({ api, event, args, message }) {
+    const query = args.join(' ');
+    if (!query) {
+      return message.reply("Please provide an anime name to search for. Example: /anisearch Naruto");
+    }
 
-    if (!query) {
-      api.sendMessage({ body: "Please provide a search query." }, event.threadID, event.messageID);
-      return;
-    }
+    const loadingMessage = await message.reply("⏳ Searching for your anime edit... Please wait!");
+    api.setMessageReaction("✨", event.messageID, (err) => {}, true);
+    
+    try {
+      const modifiedQuery = `${query} anime edit`;
+      const response = await axios.get(`https://lyric-search-neon.vercel.app/kshitiz?keyword=${encodeURIComponent(modifiedQuery)}`);
+      const videos = response.data;
 
-    // Append "anime edit" to the query
-    const modifiedQuery = `${query} anime edit`;
+      if (!videos || videos.length === 0) {
+        api.unsendMessage(loadingMessage.messageID);
+        return message.reply(`❌ No anime edits found for "${query}".`);
+      }
 
-    const videos = await fetchTikTokVideos(modifiedQuery);
+      const selectedVideo = videos[Math.floor(Math.random() * videos.length)];
+      const videoUrl = selectedVideo.videoUrl;
 
-    if (!videos || videos.length === 0) {
-      api.sendMessage({ body: `No videos found for query: ${query}.` }, event.threadID, event.messageID);
-      return;
-    }
+      if (!videoUrl) {
+        api.unsendMessage(loadingMessage.messageID);
+        return message.reply('❌ Error: Video data is incomplete. Please try again.');
+      }
 
-    const selectedVideo = videos[Math.floor(Math.random() * videos.length)];
-    const videoUrl = selectedVideo.video;
-    const title = selectedVideo.title || "No title available";
+      const videoStream = (await axios.get(videoUrl, { responseType: 'stream' })).data;
+      
+      await message.reply({
+        body: `✨ Here is your anime edit for: **${query}**`,
+        attachment: videoStream,
+      });
 
-    if (!videoUrl) {
-      api.sendMessage({ body: 'Error: Video not found in the API response.' }, event.threadID, event.messageID);
-      return;
-    }
+      api.unsendMessage(loadingMessage.messageID).catch(e => console.error(e));
 
-    try {
-      const videoStream = await getStreamFromURL(videoUrl);
-
-      await api.sendMessage({
-        body: `🎥 Video Title: ${title}\n\nHere's the video you requested!`,
-        attachment: videoStream,
-      }, event.threadID, event.messageID);
-    } catch (error) {
-      console.error(error);
-      api.sendMessage({
-        body: 'An error occurred while processing the video.\nPlease try again later.',
-      }, event.threadID, event.messageID);
-    }
-  },
+    } catch (error) {
+      console.error(error);
+      api.unsendMessage(loadingMessage.messageID).catch(e => console.error(e));
+      await message.reply('❌ An error occurred while processing the video. The API might be down.');
+    }
+  },
 };
+                                              
