@@ -5,7 +5,7 @@ const path = require("path");
 module.exports = {
   config: {
     name: "love5",
-    aliases: ["love 2 love"],
+    aliases: ["love5"],
     version: "1.0",
     author: "MOHAMMAD-BADOL", // Do not remove credit
     countDown: 5,
