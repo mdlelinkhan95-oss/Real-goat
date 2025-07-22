@@ -9,8 +9,8 @@ function shuffle(array) { // Randomize, যাতে বারবার এক �
 
 module.exports = {
   config: {
-    name: "hvdo2",
-    aliases: ["hvdo2"],
+    name: "hvdo",
+    aliases: ["hvdo"],
     version: "1.0",
     author: "kshitiz",
     countDown: 60,
